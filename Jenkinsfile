@@ -60,14 +60,37 @@ pipeline {
             }
         }
 
+        stage('Deploy Container') {
+            steps {
+                echo 'Deploying container...'
+
+                script {
+                    // Stop and remove existing container if running
+                    bat "docker stop synapmentor-app || exit 0"
+                    bat "docker rm synapmentor-app || exit 0"
+
+                    // Run new container
+                    bat "docker run -d --name synapmentor-app -p 80:80 ${DOCKER_IMAGE}:latest"
+
+                    // Wait a moment for container to start
+                    bat "timeout 5"
+
+                    // Check if container is running
+                    bat "docker ps | findstr synapmentor-app"
+
+                    echo "Container deployed successfully!"
+                    echo "Application available at: http://localhost"
+                }
+            }
+        }
+
         stage('Cleanup') {
             steps {
                 echo 'Cleaning up local Docker images...'
 
                 script {
-                    // Remove local images to save space
+                    // Remove local images to save space (keep the one we're using)
                     bat "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0"
-                    bat "docker rmi ${DOCKER_IMAGE}:latest || exit 0"
 
                     // Logout from DockerHub
                     bat "docker logout"
@@ -78,8 +101,10 @@ pipeline {
 
     post {
         success {
-            echo 'Build and Docker push successful! ✅'
-            echo "Docker image available at: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            echo 'Build, push, and deployment successful! ✅'
+            echo "Docker image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            echo "Container running at: http://localhost"
+            echo "Container name: synapmentor-app"
         }
         failure {
             echo 'Build or Docker push failed! ❌'
