@@ -246,25 +246,26 @@ EOF
                             ls -la ${packageName}.tar.gz
                         """
                     } else {
+                        // Use proper variable substitution for Windows
                         bat """
                             cd ${BUILD_DIR}
 
                             REM Create package directory
-                            mkdir ${packageName}
+                            mkdir synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}
 
                             REM Copy backend binary
-                            copy synapmentor-backend.exe ${packageName}\\
+                            copy synapmentor-backend.exe synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}\\
 
                             REM Copy frontend build
-                            xcopy /E /I frontend-dist ${packageName}\\frontend-dist
+                            xcopy /E /I frontend-dist synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}\\frontend-dist
 
                             REM Copy database and migrations if they exist
-                            if exist ..\\backend\\synapmentor.db copy ..\\backend\\synapmentor.db ${packageName}\\
-                            if exist ..\\backend\\migrations xcopy /E /I ..\\backend\\migrations ${packageName}\\migrations
+                            if exist ..\\backend\\synapmentor.db copy ..\\backend\\synapmentor.db synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}\\
+                            if exist ..\\backend\\migrations xcopy /E /I ..\\backend\\migrations synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}\\migrations
                         """
 
                         // Create Windows startup script
-                        writeFile file: "${BUILD_DIR}/${packageName}/start.bat", text: '''@echo off
+                        writeFile file: "${BUILD_DIR}/synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}/start.bat", text: '''@echo off
 echo Starting SynapMentor Application...
 echo Backend will be available at: http://localhost:8081
 echo Frontend files are in: frontend-dist/
@@ -277,7 +278,7 @@ synapmentor-backend.exe
 '''
 
                         // Create Windows README
-                        writeFile file: "${BUILD_DIR}/${packageName}/README.txt", text: '''SynapMentor Application Package
+                        writeFile file: "${BUILD_DIR}/synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}/README.txt", text: '''SynapMentor Application Package
 ==============================
 
 This package contains the built SynapMentor application.
@@ -300,8 +301,8 @@ The frontend will be available at: http://localhost:3000
 
                         bat """
                             cd ${BUILD_DIR}
-                            echo Package created: ${packageName}
-                            dir ${packageName}
+                            echo Package created: synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}
+                            dir synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}
                         """
                     }
                 }
