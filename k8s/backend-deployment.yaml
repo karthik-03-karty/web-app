@@ -1,0 +1,206 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synapmentor-backend
+  namespace: synapmentor
+  labels:
+    app: synapmentor-backend
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: synapmentor-backend
+  template:
+    metadata:
+      labels:
+        app: synapmentor-backend
+        version: v1
+    spec:
+      imagePullSecrets:
+        - name: synapmentor-registry-secret
+      containers:
+      - name: backend
+        image: your-registry.com/synapmentor-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+          name: http
+        env:
+        - name: ENV
+          valueFrom:
+            configMapKeyRef:
+              name: synapmentor-backend-config
+              key: ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: synapmentor-backend-config
+              key: PORT
+        - name: DB_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: synapmentor-backend-config
+              key: DB_PATH
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: synapmentor-backend-secrets
+              key: JWT_SECRET
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: synapmentor-backend-config
+              key: LOG_LEVEL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: data-volume
+          mountPath: /root/data
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: synapmentor-backend-pvc
+      securityContext:
+        fsGroup: 1000
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: synapmentor-backend-pvc
+  namespace: synapmentor
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+# Staging deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synapmentor-backend
+  namespace: synapmentor-staging
+  labels:
+    app: synapmentor-backend
+    version: v1
+    environment: staging
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: synapmentor-backend
+  template:
+    metadata:
+      labels:
+        app: synapmentor-backend
+        version: v1
+        environment: staging
+    spec:
+      imagePullSecrets:
+        - name: synapmentor-registry-secret
+      containers:
+      - name: backend
+        image: your-registry.com/synapmentor-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+          name: http
+        envFrom:
+        - configMapRef:
+            name: synapmentor-backend-config
+        - secretRef:
+            name: synapmentor-backend-secrets
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: data-volume
+          mountPath: /root/data
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: synapmentor-backend-pvc
+      securityContext:
+        fsGroup: 1000
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: synapmentor-backend-pvc
+  namespace: synapmentor-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard

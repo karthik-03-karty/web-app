@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"synapmentor/internal/database"
 	"synapmentor/internal/handlers"
 	"synapmentor/internal/middleware"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -34,8 +36,13 @@ func main() {
 	r.Use(cors.New(config))
 
 	// Health check endpoint
+	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "message": "SynapMentor API is running"})
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().Unix(),
+			"service":   "synapmentor-api",
+		})
 	})
 
 	// API routes
