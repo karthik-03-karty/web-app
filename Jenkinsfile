@@ -72,11 +72,12 @@ pipeline {
                     // Run new container
                     bat "docker run -d --name synapmentor-app -p 80:80 ${DOCKER_IMAGE}:latest"
 
-                    // Wait a moment for container to start
-                    bat "timeout 5"
+                    // Wait a moment for container to start (Windows syntax)
+                    bat "timeout /t 5 /nobreak"
 
                     // Check if container is running
-                    bat "docker ps | findstr synapmentor-app"
+                    bat "docker ps"
+                    bat "docker logs synapmentor-app"
 
                     echo "Container deployed successfully!"
                     echo "Application available at: http://localhost"
