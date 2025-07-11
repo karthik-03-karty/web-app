@@ -59,7 +59,7 @@ pipeline {
                         sh "mkdir -p ${BUILD_DIR}"
                         sh 'rm -rf frontend/node_modules frontend/dist'
                     } else {
-                        bat "mkdir ${BUILD_DIR}"
+                        bat "if not exist ${BUILD_DIR} mkdir ${BUILD_DIR}"
                         bat 'if exist frontend\\node_modules rmdir /s /q frontend\\node_modules'
                         bat 'if exist frontend\\dist rmdir /s /q frontend\\dist'
                     }
