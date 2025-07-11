@@ -73,7 +73,7 @@ pipeline {
                     bat "docker run -d --name synapmentor-app -p 80:80 ${DOCKER_IMAGE}:latest"
 
                     // Wait a moment for container to start (Windows syntax)
-                    bat "timeout /t 5 /nobreak"
+                    bat "ping 127.0.0.1 -n 6 > nul"
 
                     // Check if container is running
                     bat "docker ps"
