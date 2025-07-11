@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'REPLACE_WITH_YOUR_DOCKERHUB_USERNAME/synapmentor-frontend'
+        DOCKERHUB_CREDENTIALS = credentials('docker-credinatials')
+        DOCKER_IMAGE = 'nobi099/synapmentor-frontend'
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
 
