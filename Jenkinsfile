@@ -195,6 +195,35 @@ echo "Starting backend server..."
 EOF
 
                             chmod +x ${packageName}/start.sh
+
+                            # Create README for the package
+                            cat > ${packageName}/README.txt << 'EOF'
+SynapMentor Application Package
+==============================
+
+This package contains the built SynapMentor application.
+
+Contents:
+- synapmentor-backend: Go backend executable
+- frontend-dist/: Built React frontend files
+- synapmentor.db: SQLite database (if exists)
+- migrations/: Database migrations (if exists)
+- start.sh: Startup script
+
+To run the application:
+1. Run the backend: ./synapmentor-backend
+2. Serve the frontend: npx serve frontend-dist -p 3000
+   Or use any web server to serve the frontend-dist folder
+
+The backend will be available at: http://localhost:8081
+The frontend will be available at: http://localhost:3000
+EOF
+
+                            # Create archive
+                            tar -czf ${packageName}.tar.gz ${packageName}
+
+                            echo "Package created: ${packageName}.tar.gz"
+                            ls -la ${packageName}.tar.gz
                         """
                     } else {
                         bat """
@@ -226,37 +255,6 @@ echo.
 echo Starting backend server...
 synapmentor-backend.exe
 '''
-                    }
-
-                        # Create README for the package
-                        cat > ${packageName}/README.txt << 'EOF'
-SynapMentor Application Package
-==============================
-
-This package contains the built SynapMentor application.
-
-Contents:
-- synapmentor-backend: Go backend executable
-- frontend-dist/: Built React frontend files
-- synapmentor.db: SQLite database (if exists)
-- migrations/: Database migrations (if exists)
-- start.sh: Startup script
-
-To run the application:
-1. Run the backend: ./synapmentor-backend
-2. Serve the frontend: npx serve frontend-dist -p 3000
-   Or use any web server to serve the frontend-dist folder
-
-The backend will be available at: http://localhost:8081
-The frontend will be available at: http://localhost:3000
-EOF
-
-                        # Create archive
-                        tar -czf ${packageName}.tar.gz ${packageName}
-
-                        echo "Package created: ${packageName}.tar.gz"
-                        ls -la ${packageName}.tar.gz
-                        """
                     } else {
                         // Create Windows README
                         writeFile file: "${BUILD_DIR}/${packageName}/README.txt", text: '''SynapMentor Application Package
