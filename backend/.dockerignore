@@ -1,0 +1,10 @@
+*.exe
+*.log
+.git
+.gitignore
+Dockerfile
+README.md
+.env
+.env.local
+tmp/
+vendor/

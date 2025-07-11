@@ -35,7 +35,7 @@ pipeline {
                     script {
                         // Build Docker image
                         bat "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                        bat "docker build -t ${DOCKER_IMAGE}:latest ."
+                        bat "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
 
                         echo "Docker image built: ${DOCKER_IMAGE}:${DOCKER_TAG}"
                     }

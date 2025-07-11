@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - DB_PATH=/app/synapmentor.db
+    volumes:
+      - backend_data:/app/data
+    networks:
+      - synapmentor-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - synapmentor-network
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+
+networks:
+  synapmentor-network:
+    driver: bridge
