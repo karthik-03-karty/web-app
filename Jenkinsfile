@@ -10,10 +10,10 @@ pipeline {
         BUILD_DIR = 'build-artifacts'
     }
     
-    tools {
-        nodejs "Node18"  // This should match the name you configure in Jenkins
-        // go "Go1.21"   // Uncomment if you install Go plugin
-    }
+    // tools {
+    //     nodejs "Node18"  // Requires NodeJS plugin to be installed
+    //     // go "Go1.21"   // Uncomment if you install Go plugin
+    // }
     
     stages {
         stage('Checkout') {
@@ -41,17 +41,50 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 echo 'Setting up build environment...'
-                
+
                 // Create build directory
-                sh "mkdir -p ${BUILD_DIR}"
-                
-                // Display environment info
-                sh 'node --version'
-                sh 'npm --version'
-                sh 'go version'
-                
-                // Clean any previous builds
-                sh 'rm -rf frontend/node_modules frontend/dist'
+                script {
+                    if (isUnix()) {
+                        sh "mkdir -p ${BUILD_DIR}"
+                        sh 'rm -rf frontend/node_modules frontend/dist'
+                    } else {
+                        bat "mkdir ${BUILD_DIR}"
+                        bat 'if exist frontend\\node_modules rmdir /s /q frontend\\node_modules'
+                        bat 'if exist frontend\\dist rmdir /s /q frontend\\dist'
+                    }
+                }
+
+                // Check if Node.js is available
+                script {
+                    try {
+                        if (isUnix()) {
+                            sh 'node --version'
+                            sh 'npm --version'
+                        } else {
+                            bat 'node --version'
+                            bat 'npm --version'
+                        }
+                        echo 'Node.js is available'
+                    } catch (Exception e) {
+                        echo 'Node.js not found in PATH. Please install Node.js on Jenkins server.'
+                        error('Node.js is required but not found')
+                    }
+                }
+
+                // Check if Go is available
+                script {
+                    try {
+                        if (isUnix()) {
+                            sh 'go version'
+                        } else {
+                            bat 'go version'
+                        }
+                        echo 'Go is available'
+                    } catch (Exception e) {
+                        echo 'Go not found in PATH. Please install Go on Jenkins server.'
+                        error('Go is required but not found')
+                    }
+                }
             }
         }
         
@@ -59,20 +92,25 @@ pipeline {
             steps {
                 echo 'Building Go backend...'
                 dir('backend') {
-                    // Download Go dependencies
-                    sh 'go mod download'
-                    sh 'go mod tidy'
-                    
-                    // Run tests (optional)
-                    sh 'go test -v ./...'
-                    
-                    // Build the application
-                    sh 'go build -o ../build-artifacts/synapmentor-backend cmd/server/main.go'
-                    
-                    // Verify build
-                    sh 'ls -la ../build-artifacts/'
+                    script {
+                        if (isUnix()) {
+                            // Unix/Linux commands
+                            sh 'go mod download'
+                            sh 'go mod tidy'
+                            sh 'go test -v ./...'
+                            sh 'go build -o ../build-artifacts/synapmentor-backend cmd/server/main.go'
+                            sh 'ls -la ../build-artifacts/'
+                        } else {
+                            // Windows commands
+                            bat 'go mod download'
+                            bat 'go mod tidy'
+                            bat 'go test -v ./...'
+                            bat 'go build -o ..\\build-artifacts\\synapmentor-backend.exe cmd\\server\\main.go'
+                            bat 'dir ..\\build-artifacts\\'
+                        }
+                    }
                 }
-                
+
                 echo 'Backend build completed successfully!'
             }
         }
@@ -81,23 +119,27 @@ pipeline {
             steps {
                 echo 'Building React frontend...'
                 dir('frontend') {
-                    // Install dependencies
-                    sh 'npm ci --prefer-offline --no-audit'
-                    
-                    // Run linting (optional)
-                    sh 'npm run lint'
-                    
-                    // Build the application
-                    sh 'npm run build'
-                    
-                    // Copy build artifacts
-                    sh 'cp -r dist ../build-artifacts/frontend-dist'
-                    
-                    // Verify build
-                    sh 'ls -la dist/'
-                    sh 'ls -la ../build-artifacts/'
+                    script {
+                        if (isUnix()) {
+                            // Unix/Linux commands
+                            sh 'npm ci --prefer-offline --no-audit'
+                            sh 'npm run lint'
+                            sh 'npm run build'
+                            sh 'cp -r dist ../build-artifacts/frontend-dist'
+                            sh 'ls -la dist/'
+                            sh 'ls -la ../build-artifacts/'
+                        } else {
+                            // Windows commands
+                            bat 'npm ci --prefer-offline --no-audit'
+                            bat 'npm run lint'
+                            bat 'npm run build'
+                            bat 'xcopy /E /I dist ..\\build-artifacts\\frontend-dist'
+                            bat 'dir dist\\'
+                            bat 'dir ..\\build-artifacts\\'
+                        }
+                    }
                 }
-                
+
                 echo 'Frontend build completed successfully!'
             }
         }
