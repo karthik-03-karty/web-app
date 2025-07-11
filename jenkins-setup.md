@@ -2,6 +2,12 @@
 
 This guide will help you set up Jenkins to automatically build your SynapMentor application.
 
+## 🔧 Your Jenkins Configuration
+- **Jenkins URL**: http://localhost:9090
+- **Username**: root
+- **Password**: root
+- **Repository**: https://github.com/karthik-03-karty/web-app.git
+
 ## 🚀 What This Pipeline Does
 
 The Jenkins pipeline will automatically:

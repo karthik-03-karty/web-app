@@ -11,8 +11,8 @@ pipeline {
     }
     
     tools {
-        nodejs "${NODE_VERSION}"
-        go "${GO_VERSION}"
+        nodejs "Node18"  // This should match the name you configure in Jenkins
+        // go "Go1.21"   // Uncomment if you install Go plugin
     }
     
     stages {
