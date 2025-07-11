@@ -255,7 +255,7 @@ echo.
 echo Starting backend server...
 synapmentor-backend.exe
 '''
-                    } else {
+
                         // Create Windows README
                         writeFile file: "${BUILD_DIR}/${packageName}/README.txt", text: '''SynapMentor Application Package
 ==============================
