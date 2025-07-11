@@ -23,14 +23,25 @@ pipeline {
                 
                 // Display build information
                 script {
-                    env.BUILD_TIMESTAMP = sh(
-                        script: "date '+%Y-%m-%d %H:%M:%S'",
-                        returnStdout: true
-                    ).trim()
-                    env.GIT_COMMIT_SHORT = sh(
-                        script: "git rev-parse --short HEAD",
-                        returnStdout: true
-                    ).trim()
+                    if (isUnix()) {
+                        env.BUILD_TIMESTAMP = sh(
+                            script: "date '+%Y-%m-%d %H:%M:%S'",
+                            returnStdout: true
+                        ).trim()
+                        env.GIT_COMMIT_SHORT = sh(
+                            script: "git rev-parse --short HEAD",
+                            returnStdout: true
+                        ).trim()
+                    } else {
+                        env.BUILD_TIMESTAMP = bat(
+                            script: "echo %date% %time%",
+                            returnStdout: true
+                        ).trim()
+                        env.GIT_COMMIT_SHORT = bat(
+                            script: "git rev-parse --short HEAD",
+                            returnStdout: true
+                        ).trim()
+                    }
                 }
                 
                 echo "Build started at: ${env.BUILD_TIMESTAMP}"
@@ -147,29 +158,30 @@ pipeline {
         stage('Package Application') {
             steps {
                 echo 'Packaging application...'
-                
+
                 // Create application package
                 script {
                     def packageName = "synapmentor-${env.BUILD_NUMBER}-${env.GIT_COMMIT_SHORT}"
-                    
-                    sh """
-                        cd ${BUILD_DIR}
-                        
-                        # Create package directory
-                        mkdir -p ${packageName}
-                        
-                        # Copy backend binary
-                        cp synapmentor-backend ${packageName}/
-                        
-                        # Copy frontend build
-                        cp -r frontend-dist ${packageName}/
-                        
-                        # Copy database and migrations
-                        cp ../backend/synapmentor.db ${packageName}/ || echo "Database not found, will be created on first run"
-                        cp -r ../backend/migrations ${packageName}/ || echo "Migrations not found"
-                        
-                        # Create startup script
-                        cat > ${packageName}/start.sh << 'EOF'
+
+                    if (isUnix()) {
+                        sh """
+                            cd ${BUILD_DIR}
+
+                            # Create package directory
+                            mkdir -p ${packageName}
+
+                            # Copy backend binary
+                            cp synapmentor-backend ${packageName}/
+
+                            # Copy frontend build
+                            cp -r frontend-dist ${packageName}/
+
+                            # Copy database and migrations
+                            cp ../backend/synapmentor.db ${packageName}/ || echo "Database not found, will be created on first run"
+                            cp -r ../backend/migrations ${packageName}/ || echo "Migrations not found"
+
+                            # Create startup script
+                            cat > ${packageName}/start.sh << 'EOF'
 #!/bin/bash
 echo "Starting SynapMentor Application..."
 echo "Backend will be available at: http://localhost:8081"
@@ -181,9 +193,41 @@ echo ""
 echo "Starting backend server..."
 ./synapmentor-backend
 EOF
-                        
-                        chmod +x ${packageName}/start.sh
-                        
+
+                            chmod +x ${packageName}/start.sh
+                        """
+                    } else {
+                        bat """
+                            cd ${BUILD_DIR}
+
+                            REM Create package directory
+                            mkdir ${packageName}
+
+                            REM Copy backend binary
+                            copy synapmentor-backend.exe ${packageName}\\
+
+                            REM Copy frontend build
+                            xcopy /E /I frontend-dist ${packageName}\\frontend-dist
+
+                            REM Copy database and migrations if they exist
+                            if exist ..\\backend\\synapmentor.db copy ..\\backend\\synapmentor.db ${packageName}\\
+                            if exist ..\\backend\\migrations xcopy /E /I ..\\backend\\migrations ${packageName}\\migrations
+                        """
+
+                        // Create Windows startup script
+                        writeFile file: "${BUILD_DIR}/${packageName}/start.bat", text: '''@echo off
+echo Starting SynapMentor Application...
+echo Backend will be available at: http://localhost:8081
+echo Frontend files are in: frontend-dist/
+echo.
+echo To serve frontend, you can use:
+echo   npx serve frontend-dist -p 3000
+echo.
+echo Starting backend server...
+synapmentor-backend.exe
+'''
+                    }
+
                         # Create README for the package
                         cat > ${packageName}/README.txt << 'EOF'
 SynapMentor Application Package
@@ -206,13 +250,42 @@ To run the application:
 The backend will be available at: http://localhost:8081
 The frontend will be available at: http://localhost:3000
 EOF
-                        
+
                         # Create archive
                         tar -czf ${packageName}.tar.gz ${packageName}
-                        
+
                         echo "Package created: ${packageName}.tar.gz"
                         ls -la ${packageName}.tar.gz
-                    """
+                        """
+                    } else {
+                        // Create Windows README
+                        writeFile file: "${BUILD_DIR}/${packageName}/README.txt", text: '''SynapMentor Application Package
+==============================
+
+This package contains the built SynapMentor application.
+
+Contents:
+- synapmentor-backend.exe: Go backend executable
+- frontend-dist/: Built React frontend files
+- synapmentor.db: SQLite database (if exists)
+- migrations/: Database migrations (if exists)
+- start.bat: Startup script
+
+To run the application:
+1. Run the backend: synapmentor-backend.exe
+2. Serve the frontend: npx serve frontend-dist -p 3000
+   Or use any web server to serve the frontend-dist folder
+
+The backend will be available at: http://localhost:8081
+The frontend will be available at: http://localhost:3000
+'''
+
+                        bat """
+                            cd ${BUILD_DIR}
+                            echo Package created: ${packageName}
+                            dir ${packageName}
+                        """
+                    }
                 }
                 
                 echo 'Application packaged successfully!'
@@ -228,10 +301,14 @@ EOF
                                 fingerprint: true,
                                 allowEmptyArchive: false
                 
-                // Archive the package
-                archiveArtifacts artifacts: 'build-artifacts/*.tar.gz', 
-                                fingerprint: true,
-                                allowEmptyArchive: false
+                // Archive the package (Unix only - Windows doesn't create tar.gz)
+                script {
+                    if (isUnix()) {
+                        archiveArtifacts artifacts: 'build-artifacts/*.tar.gz',
+                                        fingerprint: true,
+                                        allowEmptyArchive: true
+                    }
+                }
                 
                 echo 'Artifacts archived successfully!'
             }
@@ -247,20 +324,35 @@ EOF
                 script {
                     // You can add deployment steps here
                     // For example, copy files to a development server
-                    
-                    sh """
-                        echo "Deployment steps would go here"
-                        echo "Built files are ready in: ${BUILD_DIR}"
-                        echo "Package is ready for deployment"
-                        
-                        # Example: Copy to a deployment directory
-                        # cp build-artifacts/*.tar.gz /path/to/deployment/directory/
-                        
-                        # Example: Extract and restart services
-                        # cd /path/to/deployment/directory/
-                        # tar -xzf synapmentor-*.tar.gz
-                        # ./restart-services.sh
-                    """
+
+                    if (isUnix()) {
+                        sh """
+                            echo "Deployment steps would go here"
+                            echo "Built files are ready in: ${BUILD_DIR}"
+                            echo "Package is ready for deployment"
+
+                            # Example: Copy to a deployment directory
+                            # cp build-artifacts/*.tar.gz /path/to/deployment/directory/
+
+                            # Example: Extract and restart services
+                            # cd /path/to/deployment/directory/
+                            # tar -xzf synapmentor-*.tar.gz
+                            # ./restart-services.sh
+                        """
+                    } else {
+                        bat """
+                            echo Deployment steps would go here
+                            echo Built files are ready in: ${BUILD_DIR}
+                            echo Package is ready for deployment
+
+                            REM Example: Copy to a deployment directory
+                            REM copy build-artifacts\\* C:\\deployment\\directory\\
+
+                            REM Example: Extract and restart services
+                            REM cd C:\\deployment\\directory\\
+                            REM start synapmentor-backend.exe
+                        """
+                    }
                 }
                 
                 echo 'Deployment completed!'
