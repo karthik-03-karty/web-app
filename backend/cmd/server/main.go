@@ -2,11 +2,9 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"synapmentor/internal/database"
 	"synapmentor/internal/handlers"
 	"synapmentor/internal/middleware"
-	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -34,16 +32,6 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	config.AllowCredentials = true
 	r.Use(cors.New(config))
-
-	// Health check endpoint
-	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"timestamp": time.Now().Unix(),
-			"service":   "synapmentor-api",
-		})
-	})
 
 	// API routes
 	api := r.Group("/api/v1")
