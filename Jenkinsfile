@@ -60,27 +60,27 @@ pipeline {
             }
         }
 
-        stage('Deploy Container') {
+        stage('Deploy Full Application') {
             steps {
-                echo 'Deploying container...'
+                echo 'Deploying full application with Docker Compose...'
 
                 script {
-                    // Stop and remove existing container if running
-                    bat "docker stop synapmentor-app || exit 0"
-                    bat "docker rm synapmentor-app || exit 0"
+                    // Stop existing containers
+                    bat "docker-compose down || exit 0"
 
-                    // Run new container
-                    bat "docker run -d --name synapmentor-app -p 80:80 ${DOCKER_IMAGE}:latest"
+                    // Build and start both frontend and backend
+                    bat "docker-compose up -d --build"
 
-                    // Wait a moment for container to start (Windows syntax)
-                    bat "ping 127.0.0.1 -n 6 > nul"
+                    // Wait for services to start
+                    bat "ping 127.0.0.1 -n 10 > nul"
 
-                    // Check if container is running
-                    bat "docker ps"
-                    bat "docker logs synapmentor-app"
+                    // Check if containers are running
+                    bat "docker-compose ps"
+                    bat "docker-compose logs --tail=20"
 
-                    echo "Container deployed successfully!"
-                    echo "Application available at: http://localhost"
+                    echo "Full application deployed successfully!"
+                    echo "Frontend available at: http://localhost"
+                    echo "Backend available at: http://localhost:8081"
                 }
             }
         }
@@ -104,8 +104,9 @@ pipeline {
         success {
             echo 'Build, push, and deployment successful! ✅'
             echo "Docker image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-            echo "Container running at: http://localhost"
-            echo "Container name: synapmentor-app"
+            echo "Frontend running at: http://localhost"
+            echo "Backend running at: http://localhost:8081"
+            echo "Full application with backend API is now available!"
         }
         failure {
             echo 'Build or Docker push failed! ❌'
